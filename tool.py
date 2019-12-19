@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 from hogg_spec import HoggSpec
+from datalist_spec import DatalistSpec
 import zlib
 import os
 import pathlib
@@ -13,10 +14,14 @@ class HoggFile(HoggSpec):
     def __init__(self, _io):
         super().__init__(_io)
         self.data_list = {}
+        dl_file = self.extract_file(self.hog_header.datalist_file_number)
+        dl_spec = DatalistSpec.from_bytes(dl_file)
+        for i, e in enumerate(dl_spec.entries):
+          self.data_list[i] = e.data
         for e in self.dl_journal.op_entries.op_entry:
-            self.data_list[e.id] = e.str
+          self.data_list[e.id] = e.str
 
-    def extract_file(self, idx, count, checksum_valid):
+    def extract_file(self, idx, count=None, checksum_valid=None):
         total = self.file_entries[idx].size
         unpacked = self.ea_entries[idx].unpacked_size
         offset = self.file_entries[idx].offset
