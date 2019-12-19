@@ -7,6 +7,7 @@ verify_ssl = true
 
 [packages]
 kaitaistruct = "*"
+click = "*"
 
 [requires]
 python_version = "3.7"

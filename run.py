@@ -3,6 +3,7 @@
 from hogg_spec import HoggSpec
 import zlib
 import os
+import pathlib
 
 FLAG_FFFE = b'\xFE\xFF'
 HOG_NO_VALUE = b'\xFF\xFF\xFF\xFF'
@@ -15,7 +16,7 @@ class HoggFile(HoggSpec):
         for e in self.dl_journal.op_entries.op_entry:
             self.data_list[e.id] = e.str
 
-    def file_extract(self,idx, count, checksum_valid):
+    def extract_file(self, idx, count, checksum_valid):
         total = self.file_entries[idx].size
         unpacked = self.ea_entries[idx].unpacked_size
         offset = self.file_entries[idx].offset
@@ -39,15 +40,63 @@ class HoggFile(HoggSpec):
             if f.flag_fffe == FLAG_FFFE:
                 ea = self.ea_entries[i]
                 print(f"{i:4} {f.size:8} {ea.unpacked_size:8} {target.get_file_name(i)}")
+            else:
+                print(f"{i:4} {f.size:8}        0 {target.get_file_name(i)}")
 
     def extract_all(self):
         for i, f in enumerate(target.file_entries):
             fn = self.get_file_name(i)
-            data = self.file_extract(i,0,0)
+            data = self.extract_file(i,0,0)
             os.makedirs(os.path.dirname(fn), exist_ok=True)
             with open(fn,'wb') as fo:
                 fo.write(data)
             print(f"extracted {fn}")
+
+import click
+
+@click.group()
+@click.option("--verbose/--no-verbose", default=False)
+@click.pass_context
+def cli(ctx, verbose):
+  ctx.ensure_object(dict)
+  ctx.obj['VERBOSE'] = verbose
+
+@cli.command()
+@click.argument('hoggfile', type=click.Path(exists=True))
+@click.argument('glob', required=False)
+@click.option("--out-dir", "-o", default="./", help="output directory")
+@click.pass_context
+def extract(ctx,hoggfile,glob,out_dir):
+  """ Extracts HOGGFILE to OUT_DIR"""
+  hogg = HoggFile.from_file(hoggfile)
+  click.echo(f'extracting {hoggfile} to {out_dir}')
+  with click.progressbar(hogg.file_entries, label='Extracting archive') as bar:
+    for i, f in enumerate(bar):
+      if f.flag_fffe == FLAG_FFFE:
+        fn = os.path.join(out_dir,hogg.get_file_name(i))
+        if glob and not pathlib.PurePath(fn).match(glob):
+          if ctx.obj['VERBOSE']: click.echo(f"skipping {fn}")
+          continue
+        data = hogg.extract_file(i,0,0)
+        os.makedirs(os.path.dirname(fn), exist_ok=True)
+        with open(fn,'wb') as fo:
+          fo.write(data)
+        if ctx.obj['VERBOSE']:
+          click.echo(f"extracted {fn}")
+
+@cli.command()
+@click.argument('hoggfile', type=click.Path(exists=True))
+def list(hoggfile):
+  """ Lists files in HOGGFILE"""
+  hogg = HoggFile.from_file(hoggfile)
+  click.echo(f"   index   c_size   u_size file_name")
+  for i, f in enumerate(hogg.file_entries):
+    if f.flag_fffe == FLAG_FFFE:
+      ea = hogg.ea_entries[i]
+      click.echo(f"{i:8} {f.size:8} {ea.unpacked_size:8} {hogg.get_file_name(i)}")
+
+if __name__ == "__main__":
+  cli(obj={})
 
 # estrConcatf(estr, "HogFile Info:\n");
 # 	estrConcatf(estr, "  HogFile version: %d\n", handle->header.version);
@@ -65,6 +114,6 @@ class HoggFile(HoggSpec):
 # 	bShouldDefrag = hogFileShouldDefragEx(handle, 0, &wasted_bytes);
 # 	estrConcatf(estr, "  Should defrag: %s (%s wasted)\n", bShouldDefrag?"YES":"No", friendlyBytes(wasted_bytes));
 
-target = HoggFile.from_file("/home/lokkju/.steam/steam/steamapps/common/Cryptic Studios/Neverwinter/Live/piggs/bins.hogg")
-target.ls()
-target.extract_all()
+#target = HoggFile.from_file("/home/lokkju/.steam/steam/steamapps/common/Cryptic Studios/Neverwinter/Live/piggs/bins.hogg")
+#target.ls()
+#target.extract_all()
