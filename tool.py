@@ -2,6 +2,7 @@
 
 from hogg_spec import HoggSpec
 from datalist_spec import DatalistSpec
+from wtex_spec import WtexSpec
 import zlib
 import os
 import pathlib
@@ -99,6 +100,18 @@ def list(hoggfile):
     if f.flag_fffe == FLAG_FFFE:
       ea = hogg.ea_entries[i]
       click.echo(f"{i:8} {f.size:8} {ea.unpacked_size:8} {hogg.get_file_name(i)}")
+
+@cli.command()
+@click.argument('wtexfile', type=click.Path(exists=True))
+@click.argument('ddsfile', type=click.Path(exists=False), required=False)
+def convert_wtex_to_dds(wtexfile,ddsfile):
+  """ Converts a WTEX file to a DDS file """
+  wtex = WtexSpec.from_file(wtexfile)
+  if ddsfile is None:
+    ddsfile = pathlib.Path(wtexfile).with_suffix('.dds')
+    with open(ddsfile,'wb') as fo:
+      fo.write(wtex.data)
+  click.echo(f"Wrote DDS to {ddsfile}")
 
 if __name__ == "__main__":
   cli(obj={})

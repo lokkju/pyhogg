@@ -14,7 +14,12 @@ pipenv run python tool.py [extract|list] <hogg file>
 That's it, folks!
 
 ## Current status
-Lists and extracts files from Neverwinter Online mod 17, with correct filenames
+#### Hogg Files
+* Lists all files with correct names from ?DataList and DataList Journal
+* Extracts all files or a glob-matched subset
+
+#### Wtex Files
+* Converts Wtex files to DDS files for editing in GIMP
 
 ## Data structure definitions
 All datastructures (hogg files, datalist, etc) are currently being defined using Kaitai; we then generate python code and wrap it.
