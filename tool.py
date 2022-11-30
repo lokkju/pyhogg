@@ -67,7 +67,7 @@ def cli(ctx, verbose):
   ctx.ensure_object(dict)
   ctx.obj['VERBOSE'] = verbose
 
-forbiddensymb = [":", "*", "?", ">", "<", "|", "+"]
+forbiddensymb = ["%", ":", "*", "?", ">", "<", "|", "+"] # "%" has to go first, otherwise you might replace it in wrong places/more than once
 @cli.command()
 @click.argument('hoggfile', type=click.Path(exists=True))
 @click.argument('glob', required=False)
@@ -81,8 +81,8 @@ def extract(ctx,hoggfile,glob,out_dir):
     for i, f in enumerate(bar):
       if f.flag_fffe == FLAG_FFFE:
         fn = os.path.join(out_dir,hogg.get_file_name(i))
-        for sym in forbiddensymb:
-            fn = fn.replace(sym, "")
+        for k, sym in enumerate(forbiddensymb):
+            fn = fn.replace(sym, f"%{k}")
         if glob and not pathlib.PurePath(fn).match(glob):
           if ctx.obj['VERBOSE']: click.echo(f"skipping {fn}")
           continue
